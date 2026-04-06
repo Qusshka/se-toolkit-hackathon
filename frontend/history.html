@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpendSense — History</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #1a1a2e; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.4rem; }
+    nav a { color: #ccc; text-decoration: none; margin-left: 20px; }
+    nav a.active { color: white; font-weight: bold; }
+    .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .filters { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.1); display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .filters label { font-size: .85rem; color: #555; display: block; margin-bottom: 4px; }
+    .filters input, .filters select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: .9rem; }
+    .filters button { padding: 7px 16px; background: #1a1a2e; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    table { width: 100%; background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); border-collapse: collapse; overflow: hidden; }
+    th { background: #f0f0f0; padding: 10px 14px; text-align: left; font-size: .85rem; color: #555; }
+    td { padding: 10px 14px; border-top: 1px solid #f0f0f0; font-size: .9rem; }
+    tr:hover td { background: #fafafa; }
+    .amount { font-weight: bold; color: #e44; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💰 SpendSense</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="history.html" class="active">History</a>
+    </nav>
+  </header>
+  <div class="container">
+    <div class="filters">
+      <div>
+        <label for="userId">User ID</label>
+        <input type="number" id="userId" placeholder="1" min="1" style="width:80px"/>
+      </div>
+      <div>
+        <label for="fromDate">From</label>
+        <input type="date" id="fromDate"/>
+      </div>
+      <div>
+        <label for="toDate">To</label>
+        <input type="date" id="toDate"/>
+      </div>
+      <div>
+        <label for="catFilter">Category</label>
+        <select id="catFilter"><option value="">All</option></select>
+      </div>
+      <button onclick="loadHistory()">Filter</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr>
+      </thead>
+      <tbody id="expenseRows"><tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    async function loadCategories() {
+      try {
+        const cats = await apiFetch("/categories");
+        const sel = document.getElementById("catFilter");
+        cats.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id;
+          opt.textContent = `${c.icon || ""} ${c.name}`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {}
+    }
+
+    async function loadHistory() {
+      const userId = document.getElementById("userId").value || "1";
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const catId = document.getElementById("catFilter").value;
+
+      let qs = `?user_id=${userId}&limit=50`;
+      if (from) qs += `&from=${from}`;
+      if (to) qs += `&to=${to}`;
+      if (catId) qs += `&category_id=${catId}`;
+
+      try {
+        const expenses = await apiFetch(`/expenses${qs}`);
+        const tbody = document.getElementById("expenseRows");
+        if (!expenses.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa">No expenses found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = expenses.map(e => {
+          const cat = e.category || {};
+          const icon = cat.icon || "";
+          const catName = cat.name || "—";
+          return `<tr>
+            <td>${e.date}</td>
+            <td>${e.description}${e.is_recurring ? ' 🔁' : ''}</td>
+            <td>${icon} ${catName}</td>
+            <td class="amount">₽${parseFloat(e.amount).toFixed(2)}</td>
+          </tr>`;
+        }).join("");
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Set default date range (current month)
+    const today = new Date();
+    document.getElementById("toDate").value = today.toISOString().slice(0, 10);
+    document.getElementById("fromDate").value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+
+    // Read user_id from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("user_id")) document.getElementById("userId").value = urlParams.get("user_id");
+
+    loadCategories();
+    loadHistory();
+  </script>
+</body>
+</html>

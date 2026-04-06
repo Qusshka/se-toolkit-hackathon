@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpendSense — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #1a1a2e; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.4rem; }
+    nav a { color: #ccc; text-decoration: none; margin-left: 20px; }
+    nav a.active { color: white; font-weight: bold; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .card h3 { font-size: .8rem; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+    .card p { font-size: 1.8rem; font-weight: bold; margin-top: 6px; }
+    .charts { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+    .chart-box { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .chart-box h2 { font-size: 1rem; margin-bottom: 12px; color: #555; }
+    .user-filter { margin-bottom: 16px; }
+    .user-filter label { font-size: .9rem; color: #555; margin-right: 8px; }
+    .user-filter input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .user-filter button { padding: 6px 14px; background: #1a1a2e; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    @media (max-width: 700px) { .charts { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💰 SpendSense</h1>
+    <nav>
+      <a href="index.html" class="active">Dashboard</a>
+      <a href="history.html">History</a>
+    </nav>
+  </header>
+  <div class="container">
+    <div class="user-filter">
+      <label for="userId">User ID:</label>
+      <input type="number" id="userId" placeholder="1" min="1" />
+      <button onclick="loadDashboard()">Load</button>
+    </div>
+    <div class="cards">
+      <div class="card"><h3>Total this month</h3><p id="total">—</p></div>
+      <div class="card"><h3>Avg / day</h3><p id="avgDay">—</p></div>
+      <div class="card"><h3>Top category</h3><p id="topCat">—</p></div>
+      <div class="card"><h3>Transactions</h3><p id="txCount">—</p></div>
+    </div>
+    <div class="charts">
+      <div class="chart-box">
+        <h2>By Category</h2>
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>Daily Spending (last 30 days)</h2>
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    let pieChart, barChart;
+
+    function getParams() {
+      const params = new URLSearchParams(window.location.search);
+      const userId = params.get("user_id") || document.getElementById("userId").value || "1";
+      document.getElementById("userId").value = userId;
+      return userId;
+    }
+
+    async function loadDashboard() {
+      const userId = getParams();
+      const today = new Date();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+      const todayStr = today.toISOString().slice(0, 10);
+      const thirtyDaysAgo = new Date(today - 30 * 86400000).toISOString().slice(0, 10);
+
+      try {
+        const [summary, byCat, byDay] = await Promise.all([
+          apiFetch(`/stats/summary?user_id=${userId}&from=${monthStart}&to=${todayStr}`),
+          apiFetch(`/stats/by-category?user_id=${userId}&from=${monthStart}&to=${todayStr}`),
+          apiFetch(`/stats/by-day?user_id=${userId}&from=${thirtyDaysAgo}&to=${todayStr}`),
+        ]);
+
+        document.getElementById("total").textContent = `₽${summary.total.toFixed(2)}`;
+        document.getElementById("avgDay").textContent = `₽${summary.avg_per_day.toFixed(2)}`;
+        document.getElementById("txCount").textContent = summary.count;
+        document.getElementById("topCat").textContent = byCat.length ? `${byCat[0].icon || ""} ${byCat[0].category_name}` : "—";
+
+        renderPie(byCat);
+        renderBar(byDay);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderPie(data) {
+      if (pieChart) pieChart.destroy();
+      const ctx = document.getElementById("pieChart").getContext("2d");
+      pieChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: data.map(d => `${d.icon || ""} ${d.category_name}`),
+          datasets: [{
+            data: data.map(d => d.total),
+            backgroundColor: data.map(d => d.color || "#ccc"),
+          }],
+        },
+        options: { plugins: { legend: { position: "bottom" } } },
+      });
+    }
+
+    function renderBar(data) {
+      if (barChart) barChart.destroy();
+      const ctx = document.getElementById("barChart").getContext("2d");
+      barChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.map(d => d.date),
+          datasets: [{
+            label: "₽ spent",
+            data: data.map(d => d.total),
+            backgroundColor: "#36A2EB",
+          }],
+        },
+        options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
+      });
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
