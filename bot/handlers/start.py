@@ -22,7 +22,7 @@ Or use /add for guided entry \(pick category first\)\.
 /forecast — End\-of\-month projection \+ AI savings tips
 /reminders — Upcoming recurring payments
 /goal — Savings goal tracker with progress bar
-/digest — Toggle daily spending digest at 9pm
+/digest — Toggle daily spending digest \(every evening\)
 /ask — Chat with AI about your spending
 /cancel — Cancel current action
 /help — Show this message

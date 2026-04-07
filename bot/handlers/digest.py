@@ -1,3 +1,5 @@
+import asyncio
+import random
 from datetime import date
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -22,7 +24,7 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if new_state:
-        await update.message.reply_text("✅ Daily digest ON — I'll message you every evening at 9pm.")
+        await update.message.reply_text("✅ Daily digest ON — I'll message you every evening.")
     else:
         await update.message.reply_text("🔕 Daily digest OFF.")
 
@@ -58,6 +60,10 @@ def format_digest(user: dict, expenses_today: list, summary: dict) -> str:
 
 
 async def send_digests(application) -> None:
+    # Random delay: fires at 18:00, sleeps 0-5h → sends between 18:00 and 23:00
+    delay = random.randint(0, 5 * 3600)
+    await asyncio.sleep(delay)
+
     try:
         users = await api_client.get("/api/users/digest-enabled")
     except Exception:
