@@ -66,6 +66,20 @@ def _parse_amount_and_desc(text: str) -> tuple[float, str] | None:
     return None
 
 
+async def _try_ai_classify(description: str, categories: list) -> dict | None:
+    """Try to auto-classify description via AI. Returns category dict or None."""
+    try:
+        result = await api_client.post("/api/agent/classify", {"description": description})
+        cat_name = (result.get("category") or "").strip()
+        if cat_name:
+            for c in categories:
+                if c["name"].lower() == cat_name.lower():
+                    return c
+    except Exception:
+        pass
+    return None
+
+
 async def _show_category_keyboard(message, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Fetch categories and show inline keyboard. Returns next state."""
     try:
@@ -82,6 +96,65 @@ async def _show_category_keyboard(message, context: ContextTypes.DEFAULT_TYPE) -
     keyboard = [buttons[i:i+2] for i in range(0, len(buttons), 2)]
     await message.reply_text("Select a category:", reply_markup=InlineKeyboardMarkup(keyboard))
     return ASK_CATEGORY_FIRST
+
+
+async def _save_expense_from_message(message, context: ContextTypes.DEFAULT_TYPE, cat: dict) -> None:
+    """Save expense directly (AI-classified path) — replies to a plain message."""
+    user = message.from_user
+    try:
+        db_user = await api_client.post("/api/users", {
+            "telegram_id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+        })
+        user_id = db_user["id"]
+    except Exception:
+        await message.reply_text("⚠️ Something went wrong, try again.")
+        return
+
+    amount = context.user_data["amount"]
+    description = context.user_data["description"]
+    is_recurring = context.user_data.get("is_recurring", False)
+    recur_days = context.user_data.get("recur_days")
+    cat_id = cat["id"]
+    icon = cat.get("icon", "")
+    cat_name = cat["name"]
+
+    try:
+        await api_client.post("/api/expenses", {
+            "user_id": user_id,
+            "amount": amount,
+            "description": description,
+            "category_id": cat_id,
+            "is_recurring": is_recurring,
+            "recur_days": recur_days,
+        })
+    except Exception:
+        await message.reply_text("⚠️ Something went wrong, try again.")
+        return
+
+    recurring_note = f"\n🔁 Recurring every {recur_days} days" if is_recurring else ""
+
+    try:
+        today = date.today()
+        month_start = today.replace(day=1)
+        cat_stats = await api_client.get("/api/stats/by-category", {
+            "user_id": user_id,
+            "from": str(month_start),
+            "to": str(today),
+        })
+        cat_total = next((c["total"] for c in cat_stats if c["category_name"] == cat_name), None)
+        monthly_line = f"\nTotal on {cat_name.lower()} this month: ₽{cat_total:.0f}" if cat_total else ""
+    except Exception:
+        monthly_line = ""
+
+    await message.reply_text(
+        f"✅ Saved: {description} — ₽{amount:.0f}\n"
+        f"Category: {icon} {cat_name} | Date: today"
+        f"{recurring_note}"
+        f"{monthly_line}"
+    )
+    context.user_data.clear()
 
 
 async def _save_expense(query, context: ContextTypes.DEFAULT_TYPE, cat_id: int) -> None:
@@ -282,6 +355,17 @@ async def natural_language_expense(update: Update, context: ContextTypes.DEFAULT
     context.user_data["description"] = parsed["description"]
     context.user_data["is_recurring"] = parsed["is_recurring"]
     context.user_data["recur_days"] = parsed["recur_days"]
+
+    # Try AI auto-classification
+    try:
+        categories = await api_client.get("/api/categories")
+        matched_cat = await _try_ai_classify(parsed["description"], categories)
+        if matched_cat:
+            context.user_data["categories"] = {str(c["id"]): c for c in categories}
+            await _save_expense_from_message(update.message, context, matched_cat)
+            return ConversationHandler.END
+    except Exception:
+        pass
 
     return await _show_category_keyboard(update.message, context)
 

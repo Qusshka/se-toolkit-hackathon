@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -6,6 +6,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Expense, Reminder
 from schemas import ExpenseCreate, ExpenseOut, ExpenseUpdate
+
+
+def _is_impulse(created_at: datetime, recent_expenses: list) -> bool:
+    late_night = created_at.time() >= time(23, 0) or created_at.time() <= time(4, 0)
+    cutoff = created_at - timedelta(minutes=30)
+    rapid = sum(1 for e in recent_expenses if e.created_at >= cutoff) >= 2
+    return late_night or rapid
 
 router = APIRouter()
 
@@ -17,6 +24,14 @@ def create_expense(body: ExpenseCreate, db: Session = Depends(get_db)):
     if body.is_recurring and body.recur_days:
         next_reminder = expense_date + timedelta(days=body.recur_days)
 
+    now = datetime.utcnow()
+    recent = (
+        db.query(Expense)
+        .filter(Expense.user_id == body.user_id, Expense.created_at >= now - timedelta(minutes=30))
+        .all()
+    )
+    impulse = _is_impulse(now, recent)
+
     expense = Expense(
         user_id=body.user_id,
         amount=body.amount,
@@ -26,6 +41,7 @@ def create_expense(body: ExpenseCreate, db: Session = Depends(get_db)):
         is_recurring=body.is_recurring,
         recur_days=body.recur_days,
         next_reminder=next_reminder,
+        is_impulse=impulse,
     )
     db.add(expense)
     db.flush()

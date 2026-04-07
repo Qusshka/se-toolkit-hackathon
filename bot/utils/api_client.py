@@ -16,3 +16,17 @@ async def get(path: str, params: dict = None) -> dict:
         r = await c.get(f"{BACKEND_URL}{path}", params=params, timeout=10)
         r.raise_for_status()
         return r.json()
+
+
+async def put(path: str, data: dict) -> dict:
+    async with httpx.AsyncClient() as c:
+        r = await c.put(f"{BACKEND_URL}{path}", json=data, timeout=10)
+        r.raise_for_status()
+        return r.json()
+
+
+async def patch(path: str, data: dict) -> dict:
+    async with httpx.AsyncClient() as c:
+        r = await c.patch(f"{BACKEND_URL}{path}", json=data, timeout=10)
+        r.raise_for_status()
+        return r.json()

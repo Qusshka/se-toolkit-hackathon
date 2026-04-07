@@ -16,6 +16,7 @@ class UserOut(BaseModel):
     telegram_id: int
     username: Optional[str]
     first_name: Optional[str]
+    digest_enabled: bool = True
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -69,10 +70,40 @@ class ExpenseOut(BaseModel):
     is_recurring: bool
     recur_days: Optional[int]
     next_reminder: Optional[date]
+    is_impulse: bool = False
     created_at: datetime
     category: Optional[CategoryOut] = None
 
     model_config = {"from_attributes": True}
+
+
+# --- Goal ---
+
+class GoalCreate(BaseModel):
+    user_id: int
+    name: str
+    target: float
+    deadline: Optional[date] = None
+
+
+class GoalOut(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    target: float
+    saved: float
+    deadline: Optional[date]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class GoalDeposit(BaseModel):
+    amount: float
+
+
+class DigestToggle(BaseModel):
+    enabled: bool
 
 
 # --- Stats ---
@@ -140,3 +171,11 @@ class AgentInsightRequest(BaseModel):
 
 class AgentInsightResponse(BaseModel):
     tip: str
+
+
+class AgentClassifyRequest(BaseModel):
+    description: str
+
+
+class AgentClassifyResponse(BaseModel):
+    category: Optional[str] = None

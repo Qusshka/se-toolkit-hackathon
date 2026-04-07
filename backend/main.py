@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, SessionLocal, Base
 from models import Category
-from routers import categories, expenses, stats, reminders, agent, users
+from routers import categories, expenses, goals, stats, reminders, agent, users
 
 
 @asynccontextmanager
@@ -43,4 +43,5 @@ app.include_router(categories.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 app.include_router(reminders.router, prefix="/api")
+app.include_router(goals.router, prefix="/api")
 app.include_router(agent.router, prefix="/api")
