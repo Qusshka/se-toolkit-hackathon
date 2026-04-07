@@ -9,7 +9,7 @@ from handlers.stats import stats_command, history_command
 from handlers.reminders import reminders_command, dismiss_callback
 from handlers.forecast import forecast_command
 from handlers.agent import build_agent_conversation
-from handlers.goals import goal_command, build_goal_deposit_handler
+from handlers.goals import build_goal_conversation
 from handlers.digest import digest_command, send_digests
 
 load_dotenv()
@@ -18,7 +18,7 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
 
-DIGEST_HOUR = int(os.getenv("DIGEST_HOUR", "21"))
+DIGEST_START_HOUR = 18  # job fires at 6pm, random delay sends it between 6pm-11pm
 
 
 async def post_init(application: Application) -> None:
@@ -40,7 +40,7 @@ async def post_init(application: Application) -> None:
     from apscheduler.triggers.cron import CronTrigger
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_digests, CronTrigger(hour=DIGEST_HOUR, minute=0), args=[application])
+    scheduler.add_job(send_digests, CronTrigger(hour=DIGEST_START_HOUR, minute=0), args=[application])
     scheduler.start()
     application.bot_data["scheduler"] = scheduler
 
@@ -54,20 +54,19 @@ def main():
     app.add_handler(CommandHandler("history", history_command))
     app.add_handler(CommandHandler("reminders", reminders_command))
     app.add_handler(CommandHandler("forecast", forecast_command))
-    app.add_handler(CommandHandler("goal", goal_command))
     app.add_handler(CommandHandler("digest", digest_command))
 
     # AI agent conversation (must be before expense conversation)
     app.add_handler(build_agent_conversation())
+
+    # Goal conversation (buttons flow)
+    app.add_handler(build_goal_conversation())
 
     # Expense conversation + natural language fallback
     app.add_handler(build_expense_conversation())
 
     # Reminder dismiss callback
     app.add_handler(CallbackQueryHandler(dismiss_callback, pattern=r"^dismiss_\d+$"))
-
-    # Goal deposit selection callback
-    app.add_handler(build_goal_deposit_handler())
 
     print("Bot started. Polling...")
     app.run_polling()
