@@ -10,17 +10,17 @@ HELP_TEXT = """
 Just send a message like:
   • `coffee 350`
   • `spent 450 on lunch`
-  • `netflix 699 monthly`
+  • `kinopoisk 699 monthly`
   • `gym 2500 monthly`
 
 Or use /add for guided entry \(category first, then amount\)\.
 
 *Commands:*
 /add — Log an expense
-/stats — Monthly spending summary
-/forecast — End\-of\-month projection \+ what\-if
 /history — Last 10 expenses
+/stats — Monthly spending summary
 /reminders — Upcoming recurring payments
+/forecast — End\-of\-month projection \+ what\-if
 /ask — Chat with AI about your spending
 /cancel — Cancel current action
 /help — Show this message
