@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Expense, Category
-from schemas import AgentChatRequest, AgentChatResponse, AgentInsightRequest, AgentInsightResponse
+from schemas import AgentChatRequest, AgentChatResponse, AgentClassifyRequest, AgentClassifyResponse, AgentInsightRequest, AgentInsightResponse
 from services import ai_agent
 
 router = APIRouter()
@@ -38,6 +38,14 @@ async def agent_chat(body: AgentChatRequest, db: Session = Depends(get_db)):
     context = ai_agent.build_context(expenses, body.context_days)
     reply = await ai_agent.chat(body.message, context, one_liner=False)
     return AgentChatResponse(reply=reply)
+
+
+@router.post("/agent/classify", response_model=AgentClassifyResponse)
+async def agent_classify(body: AgentClassifyRequest, db: Session = Depends(get_db)):
+    categories = db.query(Category).all()
+    names = [c.name for c in categories]
+    result = await ai_agent.classify_category(body.description, names)
+    return AgentClassifyResponse(category=result)
 
 
 @router.post("/agent/insight", response_model=AgentInsightResponse)

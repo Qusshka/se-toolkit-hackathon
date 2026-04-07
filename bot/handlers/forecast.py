@@ -14,6 +14,29 @@ async def _get_user_id(telegram_id: int, username: str, first_name: str) -> int:
     return user["id"]
 
 
+async def _get_ai_tip_for_category(category: str, total: float, count: int) -> str | None:
+    """Ask AI for a specific actionable tip for this spending category."""
+    try:
+        result = await api_client.post("/api/agent/chat", {
+            "user_id": 0,
+            "message": (
+                f"Give ONE very short actionable tip (max 12 words) to reduce spending on "
+                f"{category} (spent ₽{total:.0f} across {count} purchases this month). "
+                f"Be specific and practical. No preamble, no 💡 prefix, just the tip."
+            ),
+            "context_days": 1,
+        })
+        tip = result.get("reply", "").strip()
+        # Strip any 💡 prefix the model might add anyway
+        tip = tip.lstrip("💡").strip()
+        # Trim to first sentence if model gets verbose
+        if "." in tip:
+            tip = tip.split(".")[0].strip() + "."
+        return tip if len(tip) > 5 else None
+    except Exception:
+        return None
+
+
 async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     try:
@@ -63,15 +86,16 @@ async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if whatif:
         lines.append("\n─────────────────────────")
-        lines.append("✂️ What if you cut back?\n")
+        lines.append("💡 Ways to cut back:\n")
         for w in whatif:
             icon = w.get("icon", "")
             cat = w["category"]
             total = w["total"]
             count = w["count"]
-            save_half = w["save_half"]
-            proj_half = w["projected_if_half"]
             lines.append(f"{icon} {cat} ({count} purchases, ₽{total:.2f})")
-            lines.append(f"  Cut in half → save ₽{save_half:.2f} → projected ₽{proj_half:.2f}\n")
+            tip = await _get_ai_tip_for_category(cat, total, count)
+            if tip:
+                lines.append(f"  💡 {tip}")
+            lines.append("")
 
     await update.message.reply_text("\n".join(lines))

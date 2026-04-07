@@ -29,6 +29,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         summary = await api_client.get("/api/stats/summary", params)
         by_cat = await api_client.get("/api/stats/by-category", params)
+        all_expenses = await api_client.get("/api/expenses", params)
     except Exception:
         await update.message.reply_text("⚠️ Something went wrong, try again.")
         return
@@ -47,6 +48,12 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if summary.get("biggest_expense"):
         big = summary["biggest_expense"]
         lines.append(f"\nBiggest single expense: {big['description']} — ₽{big['amount']:.2f}")
+
+    # Impulse summary
+    impulse_items = [e for e in all_expenses if e.get("is_impulse")]
+    if impulse_items:
+        impulse_total = sum(float(e["amount"]) for e in impulse_items)
+        lines.append(f"\n⚡ Possible impulse buys this month: {len(impulse_items)}  (₽{impulse_total:.2f})")
 
     # AI tip
     try:

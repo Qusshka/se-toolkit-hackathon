@@ -11,10 +11,12 @@ class User(Base):
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
     username: Mapped[str | None] = mapped_column(String(100))
     first_name: Mapped[str | None] = mapped_column(String(100))
+    digest_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     expenses: Mapped[list["Expense"]] = relationship("Expense", back_populates="user")
     reminders: Mapped[list["Reminder"]] = relationship("Reminder", back_populates="user")
+    goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user")
 
 
 class Category(Base):
@@ -40,6 +42,7 @@ class Expense(Base):
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
     recur_days: Mapped[int | None] = mapped_column(Integer)
     next_reminder: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_impulse: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="expenses")
@@ -60,3 +63,17 @@ class Reminder(Base):
 
     expense: Mapped["Expense"] = relationship("Expense", back_populates="reminders")
     user: Mapped["User"] = relationship("User", back_populates="reminders")
+
+
+class Goal(Base):
+    __tablename__ = "goals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    target: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    saved: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped["User"] = relationship("User", back_populates="goals")

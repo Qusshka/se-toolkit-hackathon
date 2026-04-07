@@ -8,19 +8,21 @@ HELP_TEXT = """
 
 *Logging expenses:*
 Just send a message like:
-  • `coffee 350`
+  • `coffee 350` — AI auto\-picks the category
   • `spent 450 on lunch`
-  • `kinopoisk 699 monthly`
+  • `netflix 699 monthly` — tracked as recurring
   • `gym 2500 monthly`
 
-Or use /add for guided entry \(category first, then amount\)\.
+Or use /add for guided entry \(pick category first\)\.
 
 *Commands:*
-/add — Log an expense
+/add — Log an expense \(guided\)
+/stats — Monthly summary with AI tip
 /history — Last 10 expenses
-/stats — Monthly spending summary
+/forecast — End\-of\-month projection \+ AI savings tips
 /reminders — Upcoming recurring payments
-/forecast — End\-of\-month projection \+ what\-if
+/goal — Savings goal tracker with progress bar
+/digest — Toggle daily spending digest at 9pm
 /ask — Chat with AI about your spending
 /cancel — Cancel current action
 /help — Show this message
