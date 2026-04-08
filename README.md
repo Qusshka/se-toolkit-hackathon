@@ -2,7 +2,7 @@
 > Log expenses in Telegram, let AI tell you where your money actually goes.
 
 ## Demo
-[screenshot placeholder — /stats output]
+[<img width="412" height="222" alt="Screenshot 2026-04-08 at 14 28 20" src="https://github.com/user-attachments/assets/5c418767-adaa-4792-88e3-d83d4ce8f66c" />]
 [screenshot placeholder — /forecast output]
 
 ## Product Context
