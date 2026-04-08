@@ -2,8 +2,8 @@
 > Log expenses in Telegram, let AI tell you where your money actually goes.
 
 ## Demo
-[<img width="412" height="222" alt="Screenshot 2026-04-08 at 14 28 20" src="https://github.com/user-attachments/assets/5c418767-adaa-4792-88e3-d83d4ce8f66c" />]
-[screenshot placeholder — /forecast output]
+<img width="412" height="222" alt="Screenshot 2026-04-08 at 14 28 20" src="https://github.com/user-attachments/assets/5c418767-adaa-4792-88e3-d83d4ce8f66c" />
+<img width="431" height="310" alt="Screenshot 2026-04-08 at 14 28 35" src="https://github.com/user-attachments/assets/18530ff7-25df-4f2b-8681-202988763d35" />
 
 ## Product Context
 - **End users:** Anyone who wants to track personal spending without a complex app
